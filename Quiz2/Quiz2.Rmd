@@ -1,0 +1,39 @@
+---
+title: "Test"
+output: html_document
+---
+
+```{r}
+rm(list=ls())
+library(ISLR)
+nrow(College)
+ncol(College)
+summary(College)
+names(College)
+sum(College["S.F.Ratio"]<10)
+sum(College["Enroll"]>1000)
+```
+
+```{r}
+rm(list=ls())
+library(ISLR)
+Auto
+myFit <- lm(mpg ~ weight, data=Auto)
+summary(myFit)
+```
+
+```{r}
+predict <- function(GPA, IQ, Gender)
+{
+  return <- 50+20*GPA+0.07*IQ+35*Gender+0.01*GPA*IQ-10*GPA*Gender;
+}
+
+result <- predict(4, 199, 1)
+result
+50+20*GPA+0.07*IQ+35+0.01*GPA*IQ-10*GPA
+85+10.01*GPA+0.07*IQ+0.01*GPA*IQ
+
+50+20*GPA+0.07*IQ+0.01*GPA*IQ
+
+
+```
