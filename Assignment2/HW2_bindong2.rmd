@@ -1,0 +1,87 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Homework 2
+
+Author: Dong Bin
+
+email: bindong2@illinois.edu
+
+# Question 1
+
+## Part 1
+```{r}
+rm(list = ls())
+library(mlbench)
+data(BostonHousing2)
+BH = BostonHousing2[, !(colnames(BostonHousing2) %in% c("medv", "town", "tract"))]
+
+# Get some basic informations
+dim(BH)
+names(BH)
+
+# Fit a LM model
+full.model <- lm(cmedv~., data = BH)
+summary(full.model)
+```
+
+The most significant variables according to P value are:
+1. rm
+
+2. lstat
+
+## Part 2
+
+```{r}
+p <- dim(BH)[2]
+
+test <- step(full.model, k = log(p))
+```
+
+The variables removed from full model after stepwise regression with BIC criteria are:
+1. age
+
+2. indus
+
+3. lon
+
+4. lat
+
+# Part 3
+```{r}
+library(leaps)
+b = regsubsets(cmedv~ ., data = BH, nvmax =p)
+rs = summary(b)
+rs$which
+
+```
+
+# Part 4
+```{r}
+row <- rs$which[1,]
+names <- names(BH) 
+xlabel <- c(1:15)
+plot(x = xlabel, y = rs$cp, type="b", main="Mallow Cp of Different Subset Size", xlab = "Size of Subset", ylab = "Mallow Cp")
+
+rs$which[11,]
+```
+
+The best model is when model size is 11.
+Remaining variables are: crim, zn, chas1, nox, rm, dis, rad, tax, ptratio, b, lstat
+
+```{r}
+SubData <- BostonHousing2[, (colnames(BostonHousing2) %in% c("cmedv","crim", "zn", "chas1", "nox", "rm", "dis", "rad", "tax", "ptratio", "b", "lstat"))]
+head(SubData)
+summary(lm(cmedv~., data=SubData))
+```
+
+After removing insignificant variables, the most significant variables are :
+
+1. rm
+
+2. lstat
+
+# Question 2
