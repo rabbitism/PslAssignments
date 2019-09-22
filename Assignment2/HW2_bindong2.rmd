@@ -12,7 +12,7 @@ email: bindong2@illinois.edu
 
 # Question 1
 
-## Part 1
+## Part a
 ```{r}
 rm(list = ls())
 library(mlbench)
@@ -33,7 +33,7 @@ The most significant variables according to P value are:
 
 2. lstat
 
-## Part 2
+## Part b
 
 ```{r}
 p <- dim(BH)[2]
@@ -50,7 +50,7 @@ The variables removed from full model after stepwise regression with BIC criteri
 
 4. lat
 
-# Part 3
+# Part c
 ```{r}
 library(leaps)
 b = regsubsets(cmedv~ ., data = BH, nvmax =p)
@@ -59,7 +59,7 @@ rs$which
 
 ```
 
-# Part 4
+# Part d
 ```{r}
 row <- rs$which[1,]
 names <- names(BH) 
@@ -85,3 +85,121 @@ After removing insignificant variables, the most significant variables are :
 2. lstat
 
 # Question 2
+
+```{r}
+rm(list=ls())
+library(MASS)
+set.seed(1)
+n <- 200
+p <- 200
+
+# generate data
+V <- matrix(0.2, p, p)
+diag(V) <- 1
+X <- as.matrix(mvrnorm(n, mu = rep(0, p), Sigma = V))
+y <- X[, 1] + 0.5*X[, 2] + 0.25*X[, 3] + rnorm(n)
+  
+# we will use a scaled version 
+X <- scale(X)
+y <- scale(y)
+```
+
+## Part a
+
+```{r}
+soft_th <- function(b, lambda){
+  sign(b) * max(abs(b)-lambda/2, 0);
+}
+
+part_a_plot_x <- c(-10:10)
+part_a_plot_y <- list()
+for(i in c(1:length(part_a_plot_x)))
+{
+  part_a_plot_y[i] <- soft_th(part_a_plot_x[i], 5)
+}
+plot(part_a_plot_x, part_a_plot_y, type <- "b")
+```
+
+## Part b
+```{r}
+beta_old <- rep(0, p)
+update_beta <- function(beta, lambda, X, y, printable)
+{
+  current_beta <- beta;
+  r <- y-X%*%beta
+  for(i in 1:length(current_beta))
+  {
+    r = r+ X[,i]*current_beta[i]
+    current_beta[i] = soft_th(X[,i]%*%r, lambda*ncol(X))/(t(X[,i]%*%X[,i]))
+    r = r-X[,i]*current_beta[i]
+    r <- y-X%*%current_beta
+    if(i<=3 && printable)
+    {
+      cat("Obervation of r: ",  i, "\n")
+      print(c(r))
+    }
+  }
+  return <-current_beta
+}
+a = update_beta(beta_old, 0.7, X, y, TRUE)
+cat("Value of beta after one loop: \n")
+print(a)
+```
+
+## Part c
+```{r}
+myLasso <- function(X, y, lambda, tol, maxitr)
+{
+  old_beta = rep(0, p);
+  for( i in 1:maxitr)
+  {
+    cat("Iteration: ", i, "\n")
+    new_beta = update_beta(old_beta, lambda, X, y, FALSE);
+    residule = sum(abs(new_beta-old_beta))
+    if(i<=3)
+    {
+      print(residule)
+    }
+    if(residule < tol){
+      cat("Terminated after ", i, " ietrations", "\n")
+      break;
+    }
+    
+    
+    old_beta = new_beta;
+  }
+  return <- old_beta
+}
+
+myfit <- myLasso(X, y, 0.3, 1e-10, 100)
+for(i in 1:length(myfit))
+{
+  if(myfit[i]!=0)
+  {
+    cat(i, myfit[i], "\n");
+  }
+}
+```
+
+
+## Part d
+```{r}
+library(glmnet)
+lasso = glmnet(X, y, alpha=1, lambda=0.15)
+summary(lasso$beta)
+
+distance <- sum(abs(myfit-lasso$beta))
+cat("The distance between my implementation and glmnet is: ", distance, "\n")
+```
+
+
+# Question 3
+
+## Part a
+
+```{r}
+rm(list=ls())
+read.csv('Train.csv', header=TRUE)
+
+
+```
