@@ -50,7 +50,7 @@ The variables removed from full model after stepwise regression with BIC criteri
 
 4. lat
 
-# Part c
+## Part c
 ```{r}
 library(leaps)
 b = regsubsets(cmedv~ ., data = BH, nvmax =p)
@@ -59,7 +59,7 @@ rs$which
 
 ```
 
-# Part d
+## Part d
 ```{r}
 row <- rs$which[1,]
 names <- names(BH) 
@@ -171,7 +171,7 @@ myLasso <- function(X, y, lambda, tol, maxitr)
   return <- old_beta
 }
 
-myfit <- myLasso(X, y, 0.3, 1e-10, 100)
+myfit <- myLasso(X, y, 0.3, 1e-5, 100)
 for(i in 1:length(myfit))
 {
   if(myfit[i]!=0)
@@ -199,7 +199,65 @@ cat("The distance between my implementation and glmnet is: ", distance, "\n")
 
 ```{r}
 rm(list=ls())
-read.csv('Train.csv', header=TRUE)
+# Read data into R
+data <- read.csv('Train.csv', header=TRUE)
 
+str(data)
 
+# Remove item_identifier
+data <- data[, !(colnames(data) %in% c("Item_Identifier"))]
+
+# Convert labels to factor and back to variables
+data <- data.matrix(data)
+
+data <- data.frame(data)
+
+# Omit rows with NA
+data <- na.omit(data)
+str(data)
 ```
+
+## Part b
+
+```{r}
+set.seed(1)
+
+sample <- sample.int(n = nrow(data), size = floor(.5*nrow(data)), replace = F)
+train <- data[sample, ]
+test  <- data[-sample, ]
+
+train.x <- data.matrix(train[, !(colnames(train) %in% c("Item_Outlet_Sales"))])
+train.y <- data.matrix(train["Item_Outlet_Sales"])
+test.x <- data.matrix(test[, !(colnames(test) %in% c("Item_Outlet_Sales"))])
+test.y <- data.matrix(test["Item_Outlet_Sales"])
+
+ridgefit <- cv.glmnet(train.x, train.y, alpha=0, nfold=10)
+lassofit <- cv.glmnet(train.x, train.y, alpha=1, nfold=10)
+ridgefit$lambda.min
+ridgefit$lambda.1se
+lassofit$lambda.min
+lassofit$lambda.1se
+
+ridgemin <- glmnet(train.x, train.y, alpha=0, lambda = ridgefit$lambda.min)
+ridge1se <- glmnet(train.x, train.y, alpha=0, lambda = ridgefit$lambda.1se)
+lassomin <- glmnet(train.x, train.y, alpha=1, lambda = lassofit$lambda.min)
+lasso1se <- glmnet(train.x, train.y, alpha=1, lambda = lassofit$lambda.1se)
+
+ridgemin$beta
+ridge1se$beta
+lassomin$beta
+lasso1se$beta
+
+y_ridgemin <- predict.glmnet(ridgemin, test.x)
+y_ridge1se <- predict.glmnet(ridge1se, test.x)
+y_lassomin <- predict.glmnet(lassomin, test.x)
+y_lasso1se <- predict.glmnet(lasso1se, test.x)
+
+sqrt(sum((test.y-y_ridgemin)^2))
+sqrt(sum((test.y-y_ridge1se)^2))
+sqrt(sum((test.y-y_lassomin)^2))
+sqrt(sum((test.y-y_lasso1se)^2))
+```
+
+
+Comparing mse of all predictions, the best model is lasso regresion with minimal lambda 1.183442
