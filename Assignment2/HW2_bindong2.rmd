@@ -227,9 +227,9 @@ train <- data[sample, ]
 test  <- data[-sample, ]
 
 train.x <- data.matrix(train[, !(colnames(train) %in% c("Item_Outlet_Sales"))])
-train.y <- data.matrix(train["Item_Outlet_Sales"])
+train.y <- log(data.matrix(train["Item_Outlet_Sales"]))
 test.x <- data.matrix(test[, !(colnames(test) %in% c("Item_Outlet_Sales"))])
-test.y <- data.matrix(test["Item_Outlet_Sales"])
+test.y <- log(data.matrix(test["Item_Outlet_Sales"]))
 
 ridgefit <- cv.glmnet(train.x, train.y, alpha=0, nfold=10)
 lassofit <- cv.glmnet(train.x, train.y, alpha=1, nfold=10)
