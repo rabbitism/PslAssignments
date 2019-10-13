@@ -34,3 +34,6 @@ vignettes/*.pdf
 
 # Shiny token, see https://shiny.rstudio.com/articles/shinyapps.html
 rsconnect/
+
+Assignment4/HW4_bindong2_files/*
+Assignment4/HW4_bindong2_cache/*

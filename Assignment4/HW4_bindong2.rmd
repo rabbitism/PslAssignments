@@ -1,0 +1,231 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Homework 4
+
+Author: Dong Bin
+
+email: bindong2@illinois.edu
+
+## Question 1
+
+### Data preparation
+```{r}
+rm(list=ls())
+
+set.seed(1)
+
+raw.data <-read.csv("Sepsis.csv")
+
+n <- nrow(raw.data)
+
+ntest <- round(n*0.3)
+
+test.id = sample(1:n, ntest)
+
+
+training.data <- raw.data[-test.id, ]
+
+testing.data <- raw.data[test.id, ]
+
+
+training.active <- subset(training.data, THERAPY==1)
+
+training.control <- subset(training.data, THERAPY==0)
+
+training.active.data <- training.active[, c("Health", "PRAPACHE","AGE","BLGCS","ORGANNUM","BLIL6","BLLPLAT","BLLBILI","BLLCREAT","TIMFIRST","BLADL","blSOFA")]
+training.active.best <- training.active[, "BEST"]
+
+training.control.data <- training.control[,c("Health", "PRAPACHE","AGE","BLGCS","ORGANNUM","BLIL6","BLLPLAT","BLLBILI","BLLCREAT","TIMFIRST","BLADL","blSOFA")]
+training.control.best <- training.control[, "BEST"]
+
+testing.data.data <- testing.data[, c("Health", "PRAPACHE","AGE","BLGCS","ORGANNUM","BLIL6","BLLPLAT","BLLBILI","BLLCREAT","TIMFIRST","BLADL","blSOFA")]
+
+testing.data.best <- testing.data[, c("BEST")]
+
+#testing.data
+```
+
+
+### Demo
+```{r}
+library(randomForest)
+
+active.forest <- randomForest(Health~., data=training.active.data, mtry=3, nodesize=100)
+control.forest <- randomForest(Health~., data=training.control.data, mtry=3, nodesize=100)
+
+predictions<-predict(active.forest, testing.data.data)
+
+result <- sum((testing.data.best - predictions)^2)/length(predictions)
+
+
+
+GetPrediction <- function(prediction.active, prediction.control)
+{
+  diff <- prediction.active - prediction.control
+  result <- sapply(diff, function(x){
+    if(x>0){return <- 1}
+    else {return <- 0}
+      })
+  return <- result
+}
+
+mtrys <- c(1, 3, 6, 9)
+
+nodesizes <- c(10, 100, 500, 1000)
+
+errors<- matrix(rep(0, times=length(mtrys)*length(nodesizes)), nrow=length(mtrys), ncol=length(nodesizes))
+
+```
+
+### Train random forest
+```{r cache=TRUE}
+
+for(iter in c(1:100))
+{
+  cat(iter, " ")
+  if(iter%%10==0)
+  {
+    cat("\n")
+  }
+
+  
+  set.seed(iter)
+  
+  test.id = sample(1:n, ntest)
+  
+  training.data <- raw.data[-test.id, ]
+  testing.data <- raw.data[test.id, ]
+  
+  training.active <- subset(training.data, THERAPY==1)
+  training.control <- subset(training.data, THERAPY==0)
+  
+  training.active.data <- training.active[, c("Health", "PRAPACHE","AGE","BLGCS","ORGANNUM","BLIL6","BLLPLAT","BLLBILI","BLLCREAT","TIMFIRST","BLADL","blSOFA")]
+  training.active.best <- training.active[, "BEST"]
+
+  training.control.data <- training.control[,c("Health", "PRAPACHE","AGE","BLGCS","ORGANNUM","BLIL6","BLLPLAT","BLLBILI","BLLCREAT","TIMFIRST","BLADL","blSOFA")]
+  training.control.best <- training.control[, "BEST"]
+
+  testing.data.data <- testing.data[, c("Health", "PRAPACHE","AGE","BLGCS","ORGANNUM","BLIL6","BLLPLAT","BLLBILI","BLLCREAT","TIMFIRST","BLADL","blSOFA")]
+  
+  testing.data.best <- testing.data[, c("BEST")]
+  
+  for(i in 1:length(mtrys))
+  {
+    for(j in 1:length(nodesizes))
+    {
+      active.forest <- randomForest(Health~., data=training.active.data, mtry=mtrys[i], nodesize=nodesizes[j])
+      control.forest <- randomForest(Health~., data=training.control.data, mtry=mtrys[i], nodesize=nodesizes[j])
+      
+      predictions.active <- predict(active.forest, testing.data.data)
+      
+      predictions.control <- predict(control.forest, testing.data.data)
+      predictions <- GetPrediction(predictions.active, predictions.control)
+      
+      error <- sum((testing.data.best - predictions)^2)/length(predictions)
+      
+      errors[i,j]= errors[i,j]+error
+    }
+  }
+}
+
+```
+
+### Check Errors
+```{r}
+errors.average <- errors/100
+
+errors.average
+```
+
+### Demo Errors
+```{r}
+plot(mtrys, errors.average[1,],ylim=c(0.1,0.4), main="Error by mtry")
+for(i in 1:length(mtrys))
+{
+  lines(mtrys, errors.average[i,], col=i+1)
+}
+
+plot(nodesizes, errors.average[,1],ylim=c(0.1,0.4), main="Error by nodesize")
+for(i in 1:length(nodesizes))
+{
+  lines(nodesizes, errors.average[,i], col=i+1)
+}
+
+```
+
+Based on the plots above, we can discover that the best prediction model is with parameters:
+
+mtry: 6
+
+nodesizes: 100
+
+the general trend of different parameters are: 
+
+* as mtry increase, prediction error decrease.
+* the best nodesize is about 100.
+
+## Question 2
+
+### Get predictions
+```{r}
+rm(list=ls())
+
+set.seed(1)
+
+
+raw.data <- read.csv("Sepsis.csv")
+
+data.cols <- c("Health","PRAPACHE","AGE","BLGCS","ORGANNUM","BLIL6","BLLPLAT","BLLBILI","BLLCREAT","TIMFIRST","BLADL","blSOFA")
+
+raw.data.data <- raw.data[, data.cols]
+
+raw.active <- subset(raw.data, THERAPY==1)
+raw.active.data <- raw.active[, data.cols]
+
+raw.control <- subset(raw.data, THERAPY==0)
+raw.control.data <- raw.control[, data.cols]
+
+
+GetPrediction <- function(prediction.active, prediction.control)
+{
+  diff <- prediction.active - prediction.control
+  result <- sapply(diff, function(x){
+    if(x>0){return <- 1}
+    else {return <- 0}
+      })
+  return <- result
+}
+
+
+active.forest <- randomForest(Health~., data=raw.active.data, mtry=6, nodesize=100)
+control.forest <- randomForest(Health~., data=raw.control.data, mtry=6, nodesize=100)
+
+predictions.active <- predict(active.forest, raw.data.data)
+predictions.control <- predict(control.forest, raw.data.data)
+predictions <- GetPrediction(predictions.active, predictions.control)
+
+```
+
+### Train decision tree
+```{r}
+library(rpart)
+library(rpart.plot)
+
+data.cols <- c("PRAPACHE","AGE","BLGCS","ORGANNUM","BLIL6","BLLPLAT","BLLBILI","BLLCREAT","TIMFIRST","BLADL","blSOFA")
+
+rpart.fit <- rpart(as.factor(predictions)~., data = data.frame(raw.data.data[,data.cols],predictions))
+
+
+rpart.plot(rpart.fit)
+
+rpart.fit$cptable
+plotcp(rpart.fit)
+
+prune(rpart.fit, cp=0.03)
+
+
+```
