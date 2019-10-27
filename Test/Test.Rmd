@@ -4,16 +4,49 @@ library(glmnet)
 prostate <- read.delim("prostate.data")
 head(prostate)
 
-x <- as.matrix(prostate[, 2:9])
+x <- prostate[, 2:9]
 y <- prostate[, 10]
 
-set.seed(1)
+set.seed(10)
 1:nrow(x)
-train.rows <- sample(1:nrow(x), 67)
-train <- x[train.rows,]
-test <-
+
+train.data <- subset(prostate, train==TRUE)
+test.data <- subset(prostate, train==FALSE)
+
+myfit <- lm(lpsa~., data=train.data[, 2:10])
+
+summary(myfit)
+predictions <- predict(myfit, test.data[, 2:9])
+predictions
+
+err<- sum((predictions-test.data[,10])^2)
+err
+
+```
+
+```{r}
+library(leaps)
+
+a <- step(myfit, k=2)
+object <- summary(a)
+
+print("--------------")
+a <- step(myfit, k=log(67))
+object <- summary(a)
 
 
+#b<-regsubsets(train.data[,2:9], y=train.data[,10])
+#summary(b)
+#coef(b, 1:8)
+```
 
+```{r}
+library(ElemStatLearn)
+
+
+test.data <- zip.train;
+test.pca <- princomp(test.data[,2:257])
+
+test.pca$scores[,1:2]
 
 ```

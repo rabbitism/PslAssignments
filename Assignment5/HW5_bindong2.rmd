@@ -1,0 +1,113 @@
+#
+```{r}
+rm(list=ls())
+```
+
+```{r}
+
+library(ElemStatLearn)
+
+nrow(zip.train)
+ncol(zip.train)
+
+data <- zip.train
+#data
+
+
+customKmeans<-function(dataset=NA,k=NA, seed){
+  if(is.na(dataset) || is.na(k)){
+    stop("You must input valid parameters!!")
+  }
+ 
+  Eudist<-function(x,y){
+    distance<-sqrt(sum((x-y)^2))
+    return (distance)
+  }
+  
+  set.seed(seed)
+  
+  rows.dataset<-nrow(dataset)
+  continue.change=TRUE
+  initPoint<-dataset[sample.int(rows.dataset,size = k),]
+  formerPoint<-initPoint
+  iterPoint<-matrix(0,nrow = k,ncol = ncol(dataset))
+  
+
+  error.matrix<-matrix(0,nrow=rows.dataset,ncol=k)
+  while(continue.change){
+
+    cluster.matrix<-matrix(0,nrow=rows.dataset,ncol=k)
+    for(i in 1:rows.dataset){
+      for(j in 1:k){
+        error.matrix[i,j]<-Eudist(dataset[i,2:257],formerPoint[j,2:257])
+      }
+    }
+
+    for(i in 1:rows.dataset){
+      cluster.matrix[i,which.min(error.matrix[i,])]<-1
+    }
+    
+    for(i in 1:k){
+      iterPoint[i,]<-apply(dataset[which(cluster.matrix[,i] == 1),],2,"mean")
+    }
+    all.true<-c()
+
+    for(i in 1:k){
+      if(all(formerPoint[i,] == iterPoint[i,]) == T){
+        all.true[i]<-TRUE
+      }
+    }
+    formerPoint = iterPoint
+    continue.change=ifelse(all(all.true) == T,F,T)
+  }
+  colnames(iterPoint)<-colnames(dataset)
+  out=list()
+  out[["centers"]]<-iterPoint
+  out[["distance"]]<-error.matrix
+  out[["cluster"]]<-rep(1,rows.dataset)
+  for(i in 1:rows.dataset){
+    out[["cluster"]][i]<-which(cluster.matrix[i,] == 1)
+  }
+  return <-out
+}
+
+out <- customKmeans(data, 5, 1)
+
+#out
+```
+
+
+```{r}
+result <- data.frame("data"=data, "cluster"=out$cluster)
+cluster.count <- matrix(rep(0, 50), nrow=5, ncol=10)
+for(i in 1:5)
+{
+  clusters <- subset(result, cluster==i);
+
+  for(j in 0:9)
+  {
+    cluster.count[i, j+1] <- nrow(subset(clusters, data.1==j))
+  }
+}
+
+print(cluster.count)
+```
+In cluster 1, the most prevalent digits are: 0,3,6
+In cluster 2, the most prevalent digits are: 0
+In cluster 3, the most prevalent digits are: 1,2,6
+In cluster 4, the most prevalent digits are: 0,3
+In cluster 5, the most prevalent digits are: 9,4,7
+
+#
+
+
+```{r}
+for(seed in 1:2)
+{
+  out<-customKmeans(data, 5, seed);
+  test.pca <- princomp(data, );
+  whole.data <- data.frame("distance"=out$distance, "cluster"=out$cluster, "data"=data)
+  #print(whole.data)
+}
+
+```
