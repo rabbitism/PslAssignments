@@ -102,12 +102,47 @@ In cluster 5, the most prevalent digits are: 9,4,7
 
 
 ```{r}
-for(seed in 1:2)
+for(seed in 1:10)
 {
   out<-customKmeans(data, 5, seed);
   test.pca <- princomp(data, );
-  whole.data <- data.frame("distance"=out$distance, "cluster"=out$cluster, "data"=data)
-  #print(whole.data)
+  whole.data <- data.frame("distance"=out$distance, "cluster_result"=out$cluster, "data"=data)
+  error <- 0;
+  for(cluster in 1:5)
+  {
+    cluster.data <- subset(whole.data, cluster_result==cluster);
+    error <- error+sum(cluster.data[,cluster]);
+    pca <- prcomp(cluster.data[, (8:ncol(cluster.data))])
+    
+    summary(pca)
+    
+    #plot(x=dim[,1], y = dim[,2], col=cluster)
+    
+  }
+  print(error)
 }
+
+```
+
+
+Best error occurs when seed is 7. Repeat to get plots:
+
+```{r}
+out<-customKmeans(data, 5, 7);
+test.pca <- princomp(data, );
+whole.data <- data.frame("distance"=out$distance, "cluster_result"=out$cluster, "data"=data)
+
+for(cluster in 1:5)
+{
+  cluster.data <- subset(whole.data, cluster_result==cluster);
+
+  pca <- princomp(cluster.data[, (8:ncol(cluster.data))])
+    
+  dim <- pca$scores[,1:2]
+    
+  plot(x=dim[,1], y = dim[,2], col=cluster)
+    
+}
+
 
 ```
