@@ -155,6 +155,8 @@ for(i in 1:length(nodesizes))
   lines(nodesizes, errors.average[,i], col=i+1)
 }
 
+
+
 ```
 
 Based on the plots above, we can discover that the best prediction model is with parameters:
@@ -173,7 +175,7 @@ the general trend of different parameters are:
 ### Get predictions
 ```{r}
 rm(list=ls())
-
+library(randomForest)
 set.seed(1)
 
 
@@ -208,7 +210,14 @@ predictions.active <- predict(active.forest, raw.data.data)
 predictions.control <- predict(control.forest, raw.data.data)
 predictions <- GetPrediction(predictions.active, predictions.control)
 
+result <- predictions==raw.data["BEST"]
+accuracy <- sum(result==TRUE)/length(result)
+
+accuracy
+
 ```
+
+Accuracy is about 86%
 
 ### Train decision tree
 ```{r}
@@ -229,3 +238,15 @@ prune(rpart.fit, cp=0.03)
 
 
 ```
+
+```{r}
+predictions.tree <- predict(rpart.fit, raw.data.data)
+
+pre <- ifelse(predictions.tree[,2]>0.5,1,0)
+result <- pre==raw.data["BEST"]
+accuracy <- sum(result==TRUE)/length(result)
+
+accuracy
+```
+
+Accuracy of using Decision tree is about 83%

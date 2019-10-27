@@ -1,0 +1,19 @@
+```{r}
+rm(list=ls())
+library(glmnet)
+prostate <- read.delim("prostate.data")
+head(prostate)
+
+x <- as.matrix(prostate[, 2:9])
+y <- prostate[, 10]
+
+set.seed(1)
+1:nrow(x)
+train.rows <- sample(1:nrow(x), 67)
+train <- x[train.rows,]
+test <-
+
+
+
+
+```
