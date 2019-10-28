@@ -1,8 +1,16 @@
-#
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+# Question 1
+
+
 ```{r}
 rm(list=ls())
 ```
 
+## Implement K-means
 ```{r}
 
 library(ElemStatLearn)
@@ -71,13 +79,13 @@ customKmeans<-function(dataset=NA,k=NA, seed){
   return <-out
 }
 
-out <- customKmeans(data, 5, 1)
-
-#out
 ```
 
 
+## One random initialization
 ```{r}
+
+out <- customKmeans(data, 5, 1)
 result <- data.frame("data"=data, "cluster"=out$cluster)
 cluster.count <- matrix(rep(0, 50), nrow=5, ncol=10)
 for(i in 1:5)
@@ -98,14 +106,13 @@ In cluster 3, the most prevalent digits are: 1,2,6
 In cluster 4, the most prevalent digits are: 0,3
 In cluster 5, the most prevalent digits are: 9,4,7
 
-#
-
+## Ten random initialization
 
 ```{r}
 for(seed in 1:10)
 {
   out<-customKmeans(data, 5, seed);
-  test.pca <- princomp(data, );
+
   whole.data <- data.frame("distance"=out$distance, "cluster_result"=out$cluster, "data"=data)
   error <- 0;
   for(cluster in 1:5)
@@ -127,22 +134,154 @@ for(seed in 1:10)
 
 Best error occurs when seed is 7. Repeat to get plots:
 
+### Plots
 ```{r}
 out<-customKmeans(data, 5, 7);
-test.pca <- princomp(data, );
+
 whole.data <- data.frame("distance"=out$distance, "cluster_result"=out$cluster, "data"=data)
 
 for(cluster in 1:5)
 {
   cluster.data <- subset(whole.data, cluster_result==cluster);
-
-  pca <- princomp(cluster.data[, (8:ncol(cluster.data))])
+  
+  pca <- prcomp(cluster.data[, (9:ncol(cluster.data))], scale. = T)
     
-  dim <- pca$scores[,1:2]
+  dim <- pca$x
     
-  plot(x=dim[,1], y = dim[,2], col=cluster)
+  plot(x=dim[,1], y = dim[,2], col=cluster, cex=0.5)
     
 }
 
 
 ```
+
+## Compare with built-in k-means
+```{r}
+
+set.seed(1)
+
+cl <- kmeans(data[, (1:ncol(data))], centers=5)
+
+whole.data <- data.frame("cluster"=cl$cluster, "data"=data )
+
+
+counts <- matrix(rep(0, 50), nrow=5, ncol=10)
+
+for(i in 1:5)
+{
+  for(j in 0:9)
+  {
+    counts[i,j+1] = nrow(subset(subset(whole.data, cluster==i), data.1==j))
+    
+  }
+}
+
+counts
+
+
+cl2<-kmeans(data, 5, 10);
+
+whole.data <- data.frame("cluster_result"=cl2$cluster, "data"=data)
+
+for(cluster in 1:5)
+{
+  cluster.data <- subset(whole.data, cluster_result==cluster);
+  cluster.data <- cluster.data[,!apply(cluster.data, MARGIN = 2, function(x) max(x, na.rm = TRUE) == min(x, na.rm = TRUE))]
+  
+  pca <- prcomp(cluster.data[, (1:ncol(cluster.data))], scale.=TRUE)
+    
+  dim <- pca$x
+    
+  plot(x=dim[,1], y = dim[,2], col=cluster, cex=0.5)
+    
+}
+
+counts <- matrix(rep(0, 50), nrow=5, ncol=10)
+
+for(i in 1:5)
+{
+  for(j in 0:9)
+  {
+    counts[i,j+1] = nrow(subset(subset(whole.data, cluster_result==i), data.1==j))
+    
+  }
+}
+
+counts
+```
+
+Compare by count of digits in each plot
+
+1. My implementation of kmeans: 
+
+cluster|0|1|2|3|4|5|6|7|8|9|
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+1|592|0|128|289|17|27|299|1|43|5
+2|378|0|28|3|4|15|25|2|1|2
+3|63|1005|456|103|206|140|319|230|190|154
+4|133|0|41|137|38|47|20|48|21|20
+5|28|0|78|126|387|84|1|364|287|463
+
+2. Built-in K-means with 1 initialization
+
+cluster|0||1|2|3|4|5|6|7|8|9|
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+1|194|1|616|26|200|125|640|5|14| 2
+2|986|0|23|2|3|6|16|0|1| 0
+3|0|1004|7|1|43|0|3|0|1| 0
+4|14|0|82|618|4|390|3|0|87| 0
+5|0|0|3|11|402|35|2|640|439|642
+
+3. Built-in K-means with 10 initializations
+
+cluster|0||1|2|3|4|5|6|7|8|9|
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|
+1| 194|1|616|26|200|125|640|5|14|2
+2|0|0|3|11|402|35|2|640|439|642
+3|986|0|23|2|3|6|16|0|1|0
+4|14|0|82|618|4|390|3|0|87|0
+5|0|1004|7|1|43|0|3|0|1|0
+
+
+According to the table the clustering result with n different starts are identical to the clustering result with only 1 initialization.
+
+Built-in kmeans clustering has a better concentricity in each cluster as they has less variation of digits. 
+
+This is also confirmed after comparing plots. 
+
+
+# Question 2
+
+## 
+```{r}
+rm(list=ls())
+
+faithful = read.table("faithful.txt")
+
+# the parameters
+mu1 = c(3, 80)
+mu2 = c(3.5, 60)
+Sigma1 = matrix(c(0.1, 0, 0, 10), 2, 2)
+Sigma2 = matrix(c(0.1, 0, 0, 50), 2, 2)
+p = 0.5
+  
+# plot the current fit 
+library(mixtools)
+plot(faithful)
+  
+addellipse <- function(mu, Sigma, ...)
+{
+  ellipse(mu, Sigma, alpha = .05, lwd = 1, ...)
+  ellipse(mu, Sigma, alpha = .25, lwd = 2, ...)
+}
+    
+addellipse(mu1, Sigma1, col = "darkorange")
+addellipse(mu2, Sigma2, col = "deepskyblue")
+```
+
+
+```{r}
+
+
+```
+
