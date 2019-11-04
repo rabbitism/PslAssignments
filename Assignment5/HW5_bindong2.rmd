@@ -3,6 +3,13 @@ output:
   pdf_document: default
   html_document: default
 ---
+Homework 5
+
+Bin Dong
+
+bindong2@illinois.edu
+
+
 # Question 1
 
 
@@ -281,7 +288,93 @@ addellipse(mu2, Sigma2, col = "deepskyblue")
 
 
 ```{r}
+library(mvtnorm)
 
+
+l = list()
+l[[1]]<- list(mixing.weight=p, means = mu1, cov=Sigma1)
+l[[2]]<-list(mixing.weight=p, means = mu2, cov=Sigma2)
+
+epsilon = 10^-5
+
+.cov <- function(n, r, dat, m, N.k)
+{
+
+  (t(r * (dat[,1:2] -m))  %*%  (( dat[,1:2]-m))) / N.k/n
+}
+
+n <- nrow(faithful)
+
+for(i in 1:100)
+{
+    #E
+    r <- sapply(l, function(r)
+    {
+      r$mixing.weight *  mvtnorm::dmvnorm(faithful[,1:2], r$means, r$cov)
+    })
+    r <- apply(r, 1, sum)
+
+    rs <- sapply(l, function(e)
+    {
+      e$mixing.weight * mvtnorm::dmvnorm(faithful[,1:2], e$means, e$cov) / r
+    })
+
+    N.k <- apply(rs, 2, sum)
+    
+  
+    #M
+    m <- lapply(1:2, function(e)
+    {
+      apply(rs[,e] * data.matrix(faithful[,1:2]), 2, sum) / N.k[e]
+    })
+  
+    # Compute the new covariances
+    c <- lapply(1:2, function(e)
+    {
+      .cov(n, rs[,e], data.matrix(faithful[,1:2]), m[[e]], N.k[e])
+    })
+    
+    # Compute the new mixing weights
+    mi <- N.k / nrow(faithful)
+
+
+    # Update the old parameters
+    l <- lapply(1:2, function(e)
+    {
+      list(mixing.weight = mi[e], means=m[[e]], cov=(c[[e]]))
+    })
+    if(i <4 || i==100)
+    {
+      plot(faithful)
+      addellipse(l[[1]]$means, l[[1]]$cov/n, col = "darkorange")
+      addellipse(l[[2]]$means, l[[2]]$cov/n, col = "deepskyblue")
+    }
+    
+}
+
+print(l)
 
 ```
 
+
+Parameters:
+mu1: 4.28578  80.19092 
+mu2: 2.088999 54.606145
+Sigma1: 12.2218479 -0.1316292 -0.1316292  8.8108081
+Sigma2: 3.69591628 -0.01010919 -0.01010919  6.53906253
+p: 0.3632574
+
+
+This algorithm converges fast, compared with regular Gradient Descent algorithm.
+
+```{r}
+
+
+y <- 0.3632574 * rmvnorm(100, l[[1]]$means, l[[1]]$cov )+(1-0.3632574)*rmvnorm(100, l[[2]]$means, l[[2]]$cov)
+
+y <- apply(y, 1, sum)
+
+hist(y)
+
+
+```
