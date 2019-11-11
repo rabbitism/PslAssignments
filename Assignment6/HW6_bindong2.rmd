@@ -1,0 +1,38 @@
+
+# Question 1: Linearly Separable SVM using Quadratic Programming
+
+```{r Q1 Generate Data}
+rm(list=ls());
+
+set.seed(1); n <-40; p <- 2
+xpos <- matrix(rnorm(n*p, mean=0, sd=1), n, p)
+xneg <- matrix(rnorm(n*p, mean=4, sd=1), n, p)
+x <- rbind(xpos, xneg)
+y <- matrix(c(rep(1, n), rep(-1, n)))
+  
+plot(x,col=ifelse(y>0,"darkorange", "deepskyblue"), pch = 19, xlab = "x1", ylab = "x2")
+legend("topleft", c("Positive","Negative"), 
+col=c("darkorange", "deepskyblue"), pch=c(19, 19), text.col=c("darkorange", "deepskyblue"))
+
+```
+
+```{r}
+library(quadprog)
+
+eps <- 5e-4
+
+# build the system matrices
+Q <- sapply(1:n, function(i) y[i]*t(x)[,i])
+D <- t(Q)%*%Q
+d <- matrix(1, nrow=n)
+b0 <- rbind( matrix(0, nrow=1, ncol=1) , matrix(0, nrow=n, ncol=1) )
+A <- t(rbind(matrix(y, nrow=1, ncol=n), diag(nrow=n)))
+
+# call the QP solver:
+sol <- solve.QP(D+eps*diag(n), d, A, b0, factorized = FALSE)
+#sol <- solve.QP(D+eps*diag(n), d, A, b0, meq=1, factorized=FALSE)
+qpsol <- matrix(sol$solution, nrow=n)
+
+
+
+```
