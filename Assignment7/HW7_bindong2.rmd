@@ -1,0 +1,173 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+Author: Bin Dong
+
+Email: bindong2@illinois.edu
+
+# Question 1
+
+
+```{r}
+rm(list=ls())
+
+set.seed(1)
+
+n = 300
+x = runif(n)
+py <- function(x) sin(4*pi*x)/3 + 0.5
+y = (rbinom(n, 1, py(x))-0.5)*2
+plot(x, y + 0.1*runif(n, -1, 1), ylim = c(-1.1, 1.1), pch = 19,
+col = ifelse(y == 1, "darkorange", "deepskyblue"), ylab = "y")
+
+testx = seq(0, 1, length.out = 1000)
+testy = (rbinom(1000, 1, py(testx))-0.5)*2
+
+```
+
+
+```{r}
+
+get_p_hat <- function(x, y, weight)
+{
+  return <- sum(weight * (y+1)/2)/sum(weight)
+}
+
+get_gini <- function(p)
+{
+  return <- p*(1-p)
+}
+
+split_data <- function(x, y, weight, value)
+{
+  dataframe <- data.frame("x"=x, "y"=y, "weight"=weight)
+  data.left <- subset(dataframe, x<value)
+  data.right <- subset(dataframe, x>=value)
+  if(nrow(data.left)==0 || nrow(data.right)==0)
+  {
+    return <- list(score=NaN,left=NaN, right=NaN)
+  }
+  gini.left <- get_gini(get_p_hat(data.left$x, data.left$y, data.left$weight))
+  gini.right <- get_gini(get_p_hat(data.right$x, data.right$y, data.right$weight))
+
+  score <- -sum(data.left$weight)*gini.left-sum(data.right$weight)*gini.right
+  score <- score/sum(weight)
+  
+  left <- if(sum(data.left$y*data.left$weight)>0) 1 else -1
+  right <- if(sum(data.right$y*data.right$weight)>0) 1 else -1
+  
+  return <- list(score=score,left=left, right=right)
+}
+```
+
+## A test of Stump model
+```{r}
+plot_x <- seq(min(x), max(x), length=100)
+
+plot_y <- rep(0, 100)
+
+for(i in c(1:100))
+{
+  r <- split_data(x, y, rep(1/n,n), plot_x[i])
+  plot_y[i] <- r$score
+
+}
+
+plot(plot_x , plot_y)
+
+
+```
+### Function for getting criteria with maximum score
+```{r}
+
+get_split_criteria <- function(x, y, weight)
+{
+  criteria <- 0
+  max_score <- split_data(x, y, weight, mean(x))
+  for(i in x)
+  {
+    r <- split_data(x, y, rep(1/n,n), i)
+    if(!is.nan(r$score) && r$score> max_score)
+    {
+      criteria <- i
+      max_score <- r$score
+    }
+  }
+  r <- split_data(x, y, weight, criteria)
+  return <- list(criteria=criteria, score=r$score, left=r$left, right=r$right)
+}
+
+result <- get_split_criteria(x, y, rep(1/n,n))
+
+print(result)
+
+```
+
+
+# Adaboost
+
+```{r}
+
+predict_data <- function(result, x)
+{
+  r <- rep(0, length(x))
+  for(i in c(1:length(x)))
+  {
+    r[i] = if(x[i]<result$criteria) result$left else result$right
+  }
+  return <- r
+}
+
+get_error <- function(y, prediction, weights)
+{
+  
+  return <- sum((y!=prediction)*1*weights)
+}
+
+get_alpha <- function(eta)
+{
+  return <- 0.5*log((1-eta)/eta)
+}
+
+get_loss <- function(n, y,  alpha, shrinkage, predicted_data)
+{
+  return <- sum(exp(-y * shrinkage* alpha* predicted_data))/n
+}
+
+adaboost <- function(x, y, n, shrinkage, t)
+{
+  weights <- rep(1/n, n)
+  loss <- rep(0, t)
+  alphat_t <- 0
+  for(i in c(1:t))
+  {
+    print(i)
+    result <- get_split_criteria(x, y, weights)
+    predicted_data <- predict_data(result, x)
+    eta_t <- get_error(y, predicted_data, weights)
+    print(eta_t)
+    
+    alpha_t <- get_alpha(eta_t)
+    print(alpha_t)
+    
+    factor <- exp(-alpha_t*shrinkage*y*predicted_data)
+    
+    loss[i] = get_loss(n, y, alpha_t, shrinkage, predicted_data)
+    
+    weights_updated <- weights * factor
+    
+    weights <- weights_updated/sum(weights_updated)
+  }
+  
+  return <-list(loss=loss)
+}
+
+ada_result <- adaboost(x, y, 300, 0.5, 20)
+
+ada_result
+
+
+```
