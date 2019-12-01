@@ -22,152 +22,187 @@ py <- function(x) sin(4*pi*x)/3 + 0.5
 y = (rbinom(n, 1, py(x))-0.5)*2
 plot(x, y + 0.1*runif(n, -1, 1), ylim = c(-1.1, 1.1), pch = 19,
 col = ifelse(y == 1, "darkorange", "deepskyblue"), ylab = "y")
+lines(sort(x), py(x)[order(x)] - 0.5)
 
-testx = seq(0, 1, length.out = 1000)
-testy = (rbinom(1000, 1, py(testx))-0.5)*2
+data <- data.frame(x=x, y=y, weight=1/length(x))
 
 ```
 
 
 ```{r}
-
-get_p_hat <- function(x, y, weight)
+stump <- function(data)
 {
-  return <- sum(weight * (y+1)/2)/sum(weight)
-}
-
-get_gini <- function(p)
-{
-  return <- p*(1-p)
-}
-
-split_data <- function(x, y, weight, value)
-{
-  dataframe <- data.frame("x"=x, "y"=y, "weight"=weight)
-  data.left <- subset(dataframe, x<value)
-  data.right <- subset(dataframe, x>=value)
-  if(nrow(data.left)==0 || nrow(data.right)==0)
+  n <- nrow(data)
+  data_sorted <- data[order(data$x),]
+  scores <- c(rep(0, n-2))
+  criterias <- c(rep(0, n-2))
+  for(i in 2:n-2)
   {
-    return <- list(score=NaN,left=NaN, right=NaN)
+    criteria = data_sorted$x[i+1]
+    left <- subset(data_sorted, x<=criteria)
+    right <- subset(data_sorted, x>criteria)
+    p_left <- sum((subset(left, y==1))$weight)/sum(left$weight)
+    p_right <- sum((subset(right, y==1))$weight)/sum(right$weight)
+    gini_left <- p_left * (1-p_left)
+    gini_right <- p_right *(1-p_right)
+
+    score <- -sum(left$weight)*gini_left - sum(right$weight)*gini_right
+    
+    scores[i-1] = score
+    criterias[i-1] = criteria
+    
   }
-  gini.left <- get_gini(get_p_hat(data.left$x, data.left$y, data.left$weight))
-  gini.right <- get_gini(get_p_hat(data.right$x, data.right$y, data.right$weight))
-
-  score <- -sum(data.left$weight)*gini.left-sum(data.right$weight)*gini.right
-  score <- score/sum(weight)
-  
-  left <- if(sum(data.left$y*data.left$weight)>0) 1 else -1
-  right <- if(sum(data.right$y*data.right$weight)>0) 1 else -1
-  
-  return <- list(score=score,left=left, right=right)
-}
-```
-
-## A test of Stump model
-```{r}
-plot_x <- seq(min(x), max(x), length=100)
-
-plot_y <- rep(0, 100)
-
-for(i in c(1:100))
-{
-  r <- split_data(x, y, rep(1/n,n), plot_x[i])
-  plot_y[i] <- r$score
-
+  index <- which.max(scores)
+  return <- criterias[index]
 }
 
-plot(plot_x , plot_y)
-
-
-```
-### Function for getting criteria with maximum score
-```{r}
-
-get_split_criteria <- function(x, y, weight)
-{
-  criteria <- 0
-  max_score <- split_data(x, y, weight, mean(x))
-  for(i in x)
-  {
-    r <- split_data(x, y, rep(1/n,n), i)
-    if(!is.nan(r$score) && r$score> max_score)
-    {
-      criteria <- i
-      max_score <- r$score
-    }
-  }
-  r <- split_data(x, y, weight, criteria)
-  return <- list(criteria=criteria, score=r$score, left=r$left, right=r$right)
-}
-
-result <- get_split_criteria(x, y, rep(1/n,n))
-
-print(result)
-
+criteria <- stump(data)
+print(criteria)
 ```
 
 
 # Adaboost
 
 ```{r}
-
-predict_data <- function(result, x)
+adaboost <- function(P, data, delta)
 {
-  r <- rep(0, length(x))
-  for(i in c(1:length(x)))
-  {
-    r[i] = if(x[i]<result$criteria) result$left else result$right
-  }
-  return <- r
-}
-
-get_error <- function(y, prediction, weights)
-{
+  n = nrow(data)
+  c = stump(data)
   
-  return <- sum((y!=prediction)*1*weights)
-}
-
-get_alpha <- function(eta)
-{
-  return <- 0.5*log((1-eta)/eta)
-}
-
-get_loss <- function(n, y,  alpha, shrinkage, predicted_data)
-{
-  return <- sum(exp(-y * shrinkage* alpha* predicted_data))/n
-}
-
-adaboost <- function(x, y, n, shrinkage, t)
-{
-  weights <- rep(1/n, n)
-  loss <- rep(0, t)
-  alphat_t <- 0
-  for(i in c(1:t))
-  {
-    print(i)
-    result <- get_split_criteria(x, y, weights)
-    predicted_data <- predict_data(result, x)
-    eta_t <- get_error(y, predicted_data, weights)
-    print(eta_t)
-    
-    alpha_t <- get_alpha(eta_t)
-    print(alpha_t)
-    
-    factor <- exp(-alpha_t*shrinkage*y*predicted_data)
-    
-    loss[i] = get_loss(n, y, alpha_t, shrinkage, predicted_data)
-    
-    weights_updated <- weights * factor
-    
-    weights <- weights_updated/sum(weights_updated)
-  }
+  left <- subset(data, x<=criteria)
+  right <- subset(data, x>criteria)
   
-  return <-list(loss=loss)
+  left_majority <- ifelse(sum(left$weight)>0, 1, -1)
+  right_majority <- ifelse(sum(right$weight)>0, 1, -1)
+  
+  prediction <- ifelse(x<=c, left_majority, right_majority)
+  
+  eta <- sum((1-data$y*prediction)*data$weight/2)
+  
+  alpha <- 0.5*delta*log((1-eta)/eta)
+  
+  P <- P + alpha*prediction
+  
+  weight_updated <- data$weight*exp(-alpha*y*prediction)
+  
+  data$weight <- weight_updated/sum(weight_updated)
+  
+  return <- list(P=P, data=data, prediction=sign(alpha)*prediction, eta=min(eta, 1-eta), alpha=alpha, criteria=c, left=left_majority, right=right_majority)
 }
 
-ada_result <- adaboost(x, y, 300, 0.5, 20)
+```
 
-ada_result
 
+```{r}
+
+# Test data
+testx = seq(0, 1, length.out = 1000)
+testy = (rbinom(1000, 1, py(testx))-0.5)*2
+
+
+ntree=500; 
+n = length(x); 
+deltas = c(1, 0.1, 0.01, 0.001) 
+exp_loss.matrix <- matrix(ncol=ntree, nrow=length(deltas))
+
+n_test = length(testx); 
+exp_loss.predict.matrix <- matrix(ncol=ntree, nrow=length(deltas)) 
+
+get_loss <- function(y, P, n)
+{
+  return <- sum(exp(-y*P))/n
+}
+
+
+for(j in 1:length(deltas))
+{ 
+  delta <- deltas[j] 
+  exp_loss <- rep(0,ntree); 
+  exp_loss.predict <- rep(0,ntree);
+  P <- rep(0,n); 
+  P.pred=rep(0,n_test)
+  
+  data$weight <- 1/n 
+  result <- adaboost(P, data, delta);
+
+  
+  for (i in 1:ntree) 
+  { 
+    result=adaboost(result$P, data, delta); 
+    
+    exp_loss[i] <- get_loss(y, result$P, n)
+    exp_loss.predict[i] <- get_loss(testy, P.pred, n_test)
+    
+    predictions <- ifelse(testx <= result$criteria, result$left, result$right)
+    
+    P.pred <- P.pred + result$alpha*predictions
+    data <- result$data 
+    
+  }
+
+  exp_loss.matrix[j,] <- exp_loss 
+  exp_loss.predict.matrix[j,] <- exp_loss.predict
+}
+
+```
+
+
+```{r}
+
+library(ggplot2)
+
+exp_loss.frame <- data.frame(t(exp_loss.matrix)) 
+colnames(exp_loss.frame) <- deltas
+exp_loss.frame$ntree <- c(1:ntree) 
+exp_loss.melted <- reshape2::melt(exp_loss.frame, id.var='ntree')
+colnames(exp_loss.melted) <- c("ntree", "delta","exploss")
+
+# testing data loss 
+exp_loss.pred.frame <- data.frame(t(exp_loss.predict.matrix))
+colnames(exp_loss.pred.frame) <- deltas
+exp_loss.pred.frame$ntree <- c(1:ntree) 
+exp_loss.pred.melted <- reshape2::melt(exp_loss.pred.frame,id.var='ntree')
+colnames(exp_loss.pred.melted) <- c("ntree", "delta","exploss")
+
+
+ggplot(exp_loss.melted, aes(x=ntree, y=exploss, col=delta)) + geom_line() + ggtitle("Exponential loss on training data")
+
+ggplot(exp_loss.pred.melted, aes(x=ntree, y=exploss, col=delta)) + geom_line() + ggtitle("Exponential loss on testing data")
+
+
+
+```
+
+
+the best shrinkage factor is 0.01
+```{r}
+data <- data.frame(x=x, y=y, weight=1/length(x))
+
+P <- rep(0,n); 
+P.pred=rep(0,n_test)
+  
+data$weight <- 1/n 
+result <- adaboost(P, data, delta);
+
+for (i in 1:500) 
+{ 
+  result=adaboost(result$P, data, delta); 
+  
+  predictions <- ifelse(testx <= result$criteria, result$left, result$right)
+    
+  P.pred <- P.pred + result$alpha*predictions
+  data <- result$data 
+    
+}
+
+plot(x, y + 0.1*runif(n, -1, 1), ylim = c(-1.1, 1.1), pch = 19,
+col = ifelse(y == 1, "darkorange", "deepskyblue"), ylab = "y")
+lines(sort(x), py(x)[order(x)] - 0.5)
+
+points(x, sign(result$P), col="black")
+points(x, result$P, col="red")
+
+points(testx, sign(P.pred), col="black")
+points(testx, P.pred, col="red")
 
 ```
