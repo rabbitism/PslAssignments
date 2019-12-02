@@ -222,7 +222,10 @@ print(rmse)
 
 ```
 
-### Model 2: Predict with 
+### Model 2: Predict with random forest
+
+2.1 Random forest with only price and vintage
+
 ```{r}
 library(randomForest)
 
@@ -240,6 +243,7 @@ print(rmse)
 
 ```
 
+2.2 Random forest with price, vintage and description vector
 
 ```{r}
 library(randomForest)
