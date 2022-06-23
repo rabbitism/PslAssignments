@@ -1,0 +1,3 @@
+*.rmd linguist-language=R
+*.pdf linguist-language=R
+*.html linguist-language=R
